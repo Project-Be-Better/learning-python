@@ -1,9 +1,21 @@
 # Modules vs Packages
 
-> [!NOTE] Definition
+> Definition
 In short, modules provide an easy way to organize components into a system by serving as self-contained packages of variables known as namespaces. Ultimately, Python’s modules allow us to link individual files into a larger program system
 
 Python fosters a modular program structure that groups functionality into coherent and reusable units, in ways that are natural, and almost automatic
+
+A module in Python is simply a file containing Python code. This code can consist of variables, functions, classes, or any other Python objects. Modules allow you to logically organize your Python code into reusable units. They provide a way to encapsulate related code together, making it easier to manage and maintain.
+
+You can import modules into other Python scripts using the `import` statement. For example:
+
+```python
+# Importing a module
+import module_name
+
+# Using objects from the imported module
+module_name.function_name()
+```
 
 ##### Importance
 
