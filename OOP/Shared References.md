@@ -10,7 +10,7 @@ Unlike in some languages, in Python variables are always pointers to objects, no
 >>> a = 'spam'
 ```
 
-![[assets/python shared references.png]]
+<img src='shared-ref-1.png'>
 
 Typing these two statements generates the scene captured in Figure 6-2. The second command causes Python to create the variable b; the variable a is being used and not assigned here, so it is replaced with the object it references (3), and b is made to reference that object. The net effect is that the variables a and b wind up referencing the same object (that is, pointing to the same chunk of memory)
 
@@ -18,7 +18,8 @@ Typing these two statements generates the scene captured in Figure 6-2. The seco
  
 As with all Python assignments, this statement simply makes a new object to represent the string value 'spam' and sets a to reference this new object. It does not change the value of b; b still references the original object, the integer 3
 
-![[assets/python shared references-1.png]]
+<img src='shared-ref-2.png'>
+
 #### Shared References and In-Place Changes
 There are objects and operations that perform in-place object changes : Python’s mutable types, including lists, dictionaries, and sets. For instance, an assignment to an offset in a list actually changes the list object itself in place, rather than generating a brand-new list object
 
