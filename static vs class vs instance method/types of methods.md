@@ -127,5 +127,8 @@ class Pizza:
 Static methods also have benefits when it comes to writing test code. Because the `circle_area()` method is completely independent from the rest of the class it’s much easier to test.
 
 We don’t have to worry about setting up a complete class instance before we can test the method in a unit test. We can just fire away like we would testing a regular function. Again, this makes future maintenance easier.
+
+
+
 #### References
 1. [Python's Instance, Class, and Static Methods Demystified – Real Python](https://realpython.com/instance-class-and-static-methods-demystified/#:~:text=Instance%20methods%20need%20a%20class,access%20to%20cls%20or%20self%20.)
