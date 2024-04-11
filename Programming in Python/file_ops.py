@@ -15,15 +15,9 @@ def read_file(file_name):
     """
     ### WRITE SOLUTION HERE
 
-    # Open the file in read mode ('r')
     with open(file_name, "r") as file:
-        # Read the contents of the file
         contents = file.read()
-
-    # Print the contents
     print(contents)
-
-    # Return the contents
     return contents
 
 
@@ -42,16 +36,9 @@ def read_file_into_list(file_name):
         list: a list where each element is a line in the file.
     """
     ### WRITE SOLUTION HERE
-
-    f = open(file_name, "r")
-    lst = []
-    for line in f:
-        line.strip()
-        lst.append(line)
-
-    return lst
-
-    # raise NotImplementedError()
+    with open(file_name, "r") as file:
+        lines = [line for line in file]
+    return lines
 
 
 def write_first_line_to_file(file_contents, output_filename):
@@ -70,14 +57,9 @@ def write_first_line_to_file(file_contents, output_filename):
         output_filename: the name of the file to be written to
     """
     ### WRITE SOLUTION HERE
-    # print(">>")
-
-    first_line = file_contents[0]
-
-    # # raise NotImplementedError()
-
-    with open(output_filename, "w") as f:
-        f.write(first_line)
+    first_line = file_contents.split("\n", 1)[0]
+    with open(output_filename, "w") as file:
+        file.write(first_line)
 
 
 def read_even_numbered_lines(file_name):
@@ -98,14 +80,9 @@ def read_even_numbered_lines(file_name):
 
     # raise NotImplementedError()
 
-    readlines = read_file_into_list(file_name)
-    contents = []
-
-    for index, line in enumerate(readlines):
-        if index % 2 == 0:
-            # print(index, line)
-            contents.append(line)
-    return contents
+    with open(file_name, "r") as file:
+        lines = [line for i, line in enumerate(file) if i % 2 == 1]
+    return lines
 
 
 def read_file_in_reverse(file_name):
@@ -125,11 +102,10 @@ def read_file_in_reverse(file_name):
     """
     ### WRITE SOLUTION HERE
 
-    # raise NotImplementedError()
-    readlines = read_file_into_list(file_name)
-
-    reversed_content = readlines[::-1]
-    return reversed_content
+    with open(file_name, "r") as file:
+        lines = [line for line in file][::-1]
+    print(lines)
+    return lines
 
 
 """
