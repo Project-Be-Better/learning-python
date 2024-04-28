@@ -30,10 +30,7 @@ Only one valid answer exists.
 Follow-up: Can you come up with an algorithm that is less than O(n2) time complexity?
 
 ###### 1. State the problem clearly. Identify the input & output formats.
-
-""" 
 Given an array of numbers, find two numbers that can be added to return the target 
-"""
 
 ###### 2. Come up with some example inputs & outputs. Try to cover all edge cases.
 
@@ -50,13 +47,11 @@ Output: [0,1]
 ```
 
 ###### 3. Come up with a correct solution for the problem. State it in plain English.
-""" 
 1. Create a Hashmap called complement dict 
 2. Enumerate over the array and calculate complement 
 3. Check if the complement is in the complement dict 
     3.1 If does not exist, add the number to the complement dict with the index and value 
 4. If no values are found, [] is returned 
-"""
 
 ###### 4. Implement the solution and test it using example inputs. Fix bugs, if any.
 
@@ -88,3 +83,5 @@ def two_sum(nums: list, target: int):
 
     return []
 ```
+
+<img src="img/problem 1.png"/>
