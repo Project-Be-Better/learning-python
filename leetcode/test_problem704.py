@@ -14,3 +14,8 @@ class TestSearch(unittest.TestCase):
         target = 2
         rlt = search(nums, target)
         self.assertEqual(rlt, -1)
+
+        nums = [-1, 0, 3, 3, 5, 9, 12]
+        target = 3
+        rlt = search(nums, target)
+        self.assertNotEqual(rlt, 2)
