@@ -52,6 +52,8 @@ def contains_duplicate(nums):
     return not len(nums) == len(unique_array)
 
 ```
+
+
 ###### 5. Analyze the algorithm's complexity and identify inefficiencies, if any.
 Time complexity: O(n) where n is the number of elements in the array.
 ###### 6. Apply the right technique to overcome the inefficiency. Repeat steps 3 to 6.
