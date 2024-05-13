@@ -125,3 +125,6 @@ We do two binary searches. One for the row and another for finding the element. 
 2. [Search a 2D Matrix - Leetcode 74 - Python (youtube.com)](https://www.youtube.com/watch?v=Ber2pi2C0j0&t=106s)
 
 <img src="img/problem 74.png"/>
+
+
+
