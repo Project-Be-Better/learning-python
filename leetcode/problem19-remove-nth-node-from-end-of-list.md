@@ -85,5 +85,7 @@ Time complexity is [[Big O Notation#O(n) - Linear Time |O(n)]]
 1. [[DSA Strategy]]
 2. [[Big O Notation]]
 
+
+
 #### References
 1. [Remove Nth Node from End of List - Oracle Interview Question - Leetcode 19 (youtube.com)](https://www.youtube.com/watch?v=XVuQxVej6y8)
