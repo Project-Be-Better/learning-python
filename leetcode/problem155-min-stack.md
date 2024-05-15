@@ -55,6 +55,7 @@ class MinStack(object):
         """
         self.stack = []
         self.min_stack = []
+        
 
     def push(self, val):
         """
