@@ -53,7 +53,8 @@ Output: [8,9,9,9,0,0,0,1]
 4. Carry is sum of nodes // 10 and value to be copied over is sum of nodes % 10 
 5. Move over the nodes of linked lists, l1 and l2 to next node 
 6. Create a next List node with value to be copied , set it as the current node 
-7. Return the next node of the dummy node 
+7. Return the next node of the dummy node
+
 ###### 4. Implement the solution and test it using example inputs. Fix bugs, if any.
 ```python
 class Solution:
