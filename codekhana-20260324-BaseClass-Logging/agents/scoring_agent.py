@@ -1,10 +1,18 @@
 """Lightweight ScoringAgent - pure business logic on thick base."""
 
 from __future__ import annotations
-
+import sys
+from pathlib import Path
 from typing import Any
 
-from common.agent.base_agent import BaseAgent
+try:
+    from common.agent.base_agent import BaseAgent
+except ModuleNotFoundError:
+    # Support direct script execution: `python agents/scoring_agent.py`
+    project_root = Path(__file__).resolve().parents[1]
+    if str(project_root) not in sys.path:
+        sys.path.insert(0, str(project_root))
+    from common.agent.base_agent import BaseAgent
 
 
 class ScoringAgent(BaseAgent):
