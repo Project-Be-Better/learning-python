@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
@@ -17,7 +18,7 @@ class AgentManifest:
     queue_name: str = ""
 
 
-class BaseAgent:
+class BaseAgent(ABC):
     """Smallest runnable agent base class with lifecycle hooks."""
 
     agent_id: str = "base_agent"
@@ -38,9 +39,15 @@ class BaseAgent:
         self.execution_state: dict[str, Any] = {}
 
     def run(self, input_payload: dict[str, Any]) -> dict[str, Any]:
-        """Run pre-process, core-process, and post-process in order."""
+        """
+        Run pre-process, core-process, and post-process in order
+        """
         if not isinstance(input_payload, dict):
             raise ValueError("input_payload must be a dictionary")
+
+        # Keep state scoped to a single execution.
+        self.execution_trace = []
+        self.execution_state = {}
 
         self.execution_trace.append("pre_process")
         prepped = self.pre_process(input_payload)
@@ -60,9 +67,9 @@ class BaseAgent:
         """Hook for subclass input transformation."""
         return input_payload
 
+    @abstractmethod
     def core_process(self, input_payload: dict[str, Any]) -> dict[str, Any]:
-        """Core process. Subclasses should override this."""
-        return input_payload
+        """Core process. Concrete agents must implement this."""
 
     def post_process(self, core_output: dict[str, Any]) -> dict[str, Any]:
         """Hook for subclass output transformation."""

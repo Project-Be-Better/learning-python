@@ -33,3 +33,15 @@ def test_run_rejects_non_dict_payload() -> None:
 
     with pytest.raises(ValueError, match="input_payload must be a dictionary"):
         agent.run("invalid")  # type: ignore[arg-type]
+
+
+def test_run_resets_execution_state_each_call() -> None:
+    agent = MinimalAgent()
+
+    first = agent.run({"text": "first"})
+    second = agent.run({"text": "second"})
+
+    assert first["message"] == "processed:first"
+    assert second["message"] == "processed:second"
+    assert agent.execution_trace == ["pre_process", "core_process", "post_process"]
+    assert agent.execution_state["final_output"]["message"] == "processed:second"
