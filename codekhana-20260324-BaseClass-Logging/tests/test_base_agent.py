@@ -6,6 +6,7 @@ import json
 import pytest
 
 from agents.minimal_agent import MinimalAgent
+from common.agent.base_agent import BaseAgent
 from common.observability.logger import _clear_logger_cache
 
 
@@ -86,3 +87,74 @@ def test_run_emits_structured_lifecycle_logs(
     assert "run_started" in events
     assert "step_completed" in events
     assert "run_completed" in events
+
+
+def test_base_agent_retries_when_configured() -> None:
+    class FlakyAgent(BaseAgent):
+        agent_id = "flaky_agent"
+        task_name = "flaky_agent.run"
+        max_retries = 1
+        retry_backoff_seconds = 0.0
+        retry_exceptions = (RuntimeError,)
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls = 0
+
+        def core_process(self, input_payload: dict[str, object]) -> dict[str, object]:
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("transient")
+            return {"ok": True}
+
+    agent = FlakyAgent()
+    output = agent.run({})
+
+    assert output["ok"] is True
+    assert agent.calls == 2
+    assert agent.execution_state["attempt"] == 2
+
+
+def test_base_agent_does_not_retry_unlisted_exceptions() -> None:
+    class StrictRetryAgent(BaseAgent):
+        agent_id = "strict_retry_agent"
+        task_name = "strict_retry_agent.run"
+        max_retries = 3
+        retry_backoff_seconds = 0.0
+        retry_exceptions = (ValueError,)
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls = 0
+
+        def core_process(self, input_payload: dict[str, object]) -> dict[str, object]:
+            self.calls += 1
+            raise RuntimeError("non_retryable")
+
+    agent = StrictRetryAgent()
+
+    with pytest.raises(RuntimeError, match="non_retryable"):
+        agent.run({})
+
+    assert agent.calls == 1
+
+
+def test_base_agent_output_schema_preserves_extra_fields() -> None:
+    class OutputSchemaAgent(BaseAgent):
+        agent_id = "output_schema_agent"
+        task_name = "output_schema_agent.run"
+
+        def output_schema(self) -> dict[str, object]:
+            return {"required_field": {"type": "str", "required": True}}
+
+        def core_process(self, input_payload: dict[str, object]) -> dict[str, object]:
+            return {
+                "required_field": "ok",
+                "extra_field": 42,
+            }
+
+    agent = OutputSchemaAgent()
+    output = agent.run({})
+
+    assert output["required_field"] == "ok"
+    assert output["extra_field"] == 42

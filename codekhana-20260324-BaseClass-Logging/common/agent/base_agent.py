@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Any, TypedDict
 from uuid import uuid4
 
@@ -35,7 +35,11 @@ class SchemaValidationError(Exception):
     pass
 
 
-def validate_schema(data: dict[str, Any], schema: dict[str, Any] | None) -> dict[str, Any]:
+def validate_schema(
+    data: dict[str, Any],
+    schema: dict[str, Any] | None,
+    preserve_unknown: bool = True,
+) -> dict[str, Any]:
     """
     Lightweight schema validation with type coercion and bounds checking.
 
@@ -99,6 +103,11 @@ def validate_schema(data: dict[str, Any], schema: dict[str, Any] | None) -> dict
 
         validated[field_name] = value
 
+    if preserve_unknown:
+        for key, value in data.items():
+            if key not in validated:
+                validated[key] = value
+
     return validated
 
 
@@ -123,15 +132,23 @@ class BaseAgent(ABC):
     enable_langgraph: bool = True
     auto_enrich_output: bool = True
     max_retries: int = 0
+    retry_backoff_seconds: float = 0.0
+    retry_exceptions: tuple[type[Exception], ...] = (Exception,)
 
     def __init__(self) -> None:
+        if not self.agent_id.strip():
+            raise ValueError("agent_id must not be empty")
+
+        resolved_task_name = self.task_name or f"{self.agent_id}.run"
+
         self.manifest = AgentManifest(
             agent_id=self.agent_id,
             model_tier=self.model_tier,
             system_prompt=self.system_prompt,
-            task_name=self.task_name,
+            task_name=resolved_task_name,
             queue_name=self.queue_name,
         )
+        self.task_name = resolved_task_name
         self.execution_trace: list[str] = []
         self.execution_state: dict[str, Any] = {}
         self.logger = get_logger(f"agent.{self.agent_id}")
@@ -192,37 +209,69 @@ class BaseAgent(ABC):
             input_keys=sorted(input_payload.keys()),
         )
 
-        try:
-            if self._compiled_graph is not None:
-                self.execution_state["engine"] = "langgraph"
-                final_output = self._run_langgraph(input_payload, run_id)
-            else:
-                self.execution_state["engine"] = "sequential"
-                final_output = self._run_sequential(input_payload, run_id)
+        attempt = 0
+        while True:
+            try:
+                # Scope state to single execution attempt.
+                self.execution_trace = []
+                self.execution_state = {
+                    "run_id": run_id,
+                    "attempt": attempt + 1,
+                }
 
-            duration_ms = round((perf_counter() - started_at) * 1000, 3)
-            log_event(
-                self.logger,
-                "run_completed",
-                run_id=run_id,
-                agent_id=self.agent_id,
-                status="ok",
-                duration_ms=duration_ms,
-            )
-            return final_output
-        except Exception as exc:
-            duration_ms = round((perf_counter() - started_at) * 1000, 3)
-            log_event(
-                self.logger,
-                "run_failed",
-                run_id=run_id,
-                agent_id=self.agent_id,
-                status="error",
-                duration_ms=duration_ms,
-                error_type=type(exc).__name__,
-                error_message=str(exc),
-            )
-            raise
+                if self._compiled_graph is not None:
+                    self.execution_state["engine"] = "langgraph"
+                    final_output = self._run_langgraph(input_payload, run_id)
+                else:
+                    self.execution_state["engine"] = "sequential"
+                    final_output = self._run_sequential(input_payload, run_id)
+
+                duration_ms = round((perf_counter() - started_at) * 1000, 3)
+                log_event(
+                    self.logger,
+                    "run_completed",
+                    run_id=run_id,
+                    agent_id=self.agent_id,
+                    status="ok",
+                    duration_ms=duration_ms,
+                    attempts_used=attempt + 1,
+                )
+                return final_output
+            except Exception as exc:
+                can_retry = (
+                    isinstance(exc, self.retry_exceptions)
+                    and attempt < self.max_retries
+                )
+
+                if can_retry:
+                    attempt += 1
+                    log_event(
+                        self.logger,
+                        "run_retrying",
+                        run_id=run_id,
+                        agent_id=self.agent_id,
+                        attempt=attempt,
+                        max_retries=self.max_retries,
+                        error_type=type(exc).__name__,
+                        error_message=str(exc),
+                    )
+                    if self.retry_backoff_seconds > 0:
+                        sleep(self.retry_backoff_seconds * attempt)
+                    continue
+
+                duration_ms = round((perf_counter() - started_at) * 1000, 3)
+                log_event(
+                    self.logger,
+                    "run_failed",
+                    run_id=run_id,
+                    agent_id=self.agent_id,
+                    status="error",
+                    duration_ms=duration_ms,
+                    error_type=type(exc).__name__,
+                    error_message=str(exc),
+                    attempts_used=attempt + 1,
+                )
+                raise
 
     def _run_sequential(self, input_payload: dict[str, Any], run_id: str) -> dict[str, Any]:
         """Execute lifecycle step-by-step with schema validation."""
