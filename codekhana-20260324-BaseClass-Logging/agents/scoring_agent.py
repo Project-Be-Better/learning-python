@@ -30,6 +30,11 @@ class ScoringAgent(BaseAgent):
     task_name = "scoring_agent.score_trip"
     queue_name = "scoring_queue"
     scoring_version = "sprint2-rule-based-v2"
+    permitted_tools = ["redis_read", "redis_write", "llm_call"]
+    permitted_tables = {
+        "read": ["trips", "telemetry_events"],
+        "write": ["trip_scores", "fairness_audit_log", "driver_scores"],
+    }
 
     def input_schema(self) -> dict[str, Any]:
         """Define top-level input contract with defaults for optional lists."""

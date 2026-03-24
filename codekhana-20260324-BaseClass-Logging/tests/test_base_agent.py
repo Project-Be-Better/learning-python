@@ -6,7 +6,9 @@ import json
 import pytest
 
 from agents.minimal_agent import MinimalAgent
-from common.agent.base_agent import BaseAgent
+from common.agent.base_agent import BaseAgent, SchemaValidationError, validate_schema
+from common.infra.intent_gate import IntentGateError
+from common.infra.skill_registry import AgentManifestMismatchError
 from common.observability.logger import _clear_logger_cache
 
 
@@ -158,3 +160,163 @@ def test_base_agent_output_schema_preserves_extra_fields() -> None:
 
     assert output["required_field"] == "ok"
     assert output["extra_field"] == 42
+
+
+def test_validate_schema_supports_nested_dict_and_list() -> None:
+    schema = {
+        "context": {
+            "type": "dict",
+            "required": True,
+            "schema": {
+                "trip_id": {"type": "str", "required": True},
+                "trip_summary": {
+                    "type": "dict",
+                    "required": True,
+                    "schema": {
+                        "distance_km": {"type": "float", "required": True, "min": 0.1},
+                    },
+                },
+            },
+        },
+        "harsh_events": {
+            "type": "list",
+            "required": True,
+            "items": {
+                "type": "dict",
+                "schema": {
+                    "event_type": {"type": "str", "required": True, "enum": ["harsh_brake", "harsh_turn"]},
+                },
+            },
+        },
+    }
+
+    payload = {
+        "context": {
+            "trip_id": "trip-1",
+            "trip_summary": {"distance_km": "12.5"},
+        },
+        "harsh_events": [{"event_type": "harsh_brake"}],
+    }
+
+    validated = validate_schema(payload, schema)
+    assert validated["context"]["trip_summary"]["distance_km"] == 12.5
+
+
+def test_validate_schema_bool_parsing_is_strict() -> None:
+    schema = {
+        "enabled": {"type": "bool", "required": True},
+    }
+
+    validated = validate_schema({"enabled": "true"}, schema)
+    assert validated["enabled"] is True
+
+    with pytest.raises(SchemaValidationError):
+        validate_schema({"enabled": "maybe"}, schema)
+
+
+def test_base_agent_lifecycle_hooks_can_be_overridden() -> None:
+    class HookAgent(BaseAgent):
+        agent_id = "hook_agent"
+        task_name = "hook_agent.run"
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.failure_called = False
+
+        def core_process(self, input_payload: dict[str, object]) -> dict[str, object]:
+            if input_payload.get("fail"):
+                raise RuntimeError("hook-fail")
+            return {"ok": True}
+
+        def on_run_success(self, final_output: dict[str, object]) -> dict[str, object]:
+            final_output["hooked"] = True
+            return final_output
+
+        def on_run_failure(self, exc: Exception) -> None:
+            self.failure_called = True
+
+    agent = HookAgent()
+
+    ok = agent.run({})
+    assert ok["hooked"] is True
+
+    with pytest.raises(RuntimeError, match="hook-fail"):
+        agent.run({"fail": True})
+    assert agent.failure_called is True
+
+
+def test_base_agent_accepts_secure_envelope_when_gate_enabled() -> None:
+    from common.infra.intent_gate import IntentCapsule
+
+    class SecureEchoAgent(BaseAgent):
+        agent_id = "secure_echo_agent"
+        task_name = "secure_echo_agent.run"
+        enforce_intent_gate = True
+        expected_step = 1
+        permitted_tools = ["redis_read"]
+
+        def core_process(self, input_payload: dict[str, object]) -> dict[str, object]:
+            return {"ok": True, "text": input_payload.get("text", "")}
+
+    capsule = IntentCapsule(
+        trip_id="trip-sec-1",
+        agent="secure_echo_agent",
+        priority=9,
+        step_index=1,
+        issued_by="orchestrator",
+        allowed_inputs=["trip:trip-sec-1:context"],
+        expected_outputs=["trip:trip-sec-1:echo_output"],
+        permitted_tools=["redis_read"],
+    )
+    capsule.hmac_seal = capsule.compute_hmac()
+
+    agent = SecureEchoAgent()
+    output = agent.run(
+        {
+            "intent_capsule": {
+                "trip_id": capsule.trip_id,
+                "agent": capsule.agent,
+                "priority": capsule.priority,
+                "step_index": capsule.step_index,
+                "issued_by": capsule.issued_by,
+                "allowed_inputs": capsule.allowed_inputs,
+                "expected_outputs": capsule.expected_outputs,
+                "permitted_tools": capsule.permitted_tools,
+                "ttl": capsule.ttl,
+                "issued_at": capsule.issued_at,
+                "hmac_seal": capsule.hmac_seal,
+            },
+            "input_payload": {"text": "hello"},
+        }
+    )
+
+    assert output["ok"] is True
+    assert output["text"] == "hello"
+
+
+def test_base_agent_rejects_missing_capsule_when_gate_enabled() -> None:
+    class SecureOnlyAgent(BaseAgent):
+        agent_id = "secure_only_agent"
+        task_name = "secure_only_agent.run"
+        enforce_intent_gate = True
+
+        def core_process(self, input_payload: dict[str, object]) -> dict[str, object]:
+            return {"ok": True}
+
+    agent = SecureOnlyAgent()
+    with pytest.raises(IntentGateError, match="intent_capsule_required"):
+        agent.run({"text": "legacy"})
+
+
+def test_strict_manifest_validation_raises_on_drift() -> None:
+    class DriftAgent(BaseAgent):
+        agent_id = "scoring_agent"  # registered in skill registry
+        task_name = "drift_agent.run"
+        strict_manifest_validation = True
+        permitted_tools = ["redis_read"]  # intentionally incomplete
+
+        def core_process(self, input_payload: dict[str, object]) -> dict[str, object]:
+            return {"ok": True}
+
+    with pytest.raises(AgentManifestMismatchError):
+        DriftAgent()
