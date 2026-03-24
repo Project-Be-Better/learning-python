@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 import pytest
 
 from agents.minimal_agent import MinimalAgent
+from common.observability.logger import _clear_logger_cache
 
 
 
@@ -52,3 +54,23 @@ def test_pre_process_normalizes_whitespace() -> None:
     output = agent.run({"text": "  hello  "})
 
     assert output["message"] == "processed:hello"
+
+
+def test_run_emits_structured_lifecycle_logs(
+    monkeypatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.delenv("LOG_FORMAT", raising=False)
+    _clear_logger_cache()
+
+    agent = MinimalAgent()
+
+    agent.run({"text": "abc"})
+    captured = capfd.readouterr()
+    records = [json.loads(line) for line in captured.out.splitlines() if line.strip()]
+    events = {record.get("event") for record in records}
+
+    assert "run_started" in events
+    assert "step_completed" in events
+    assert "run_completed" in events
