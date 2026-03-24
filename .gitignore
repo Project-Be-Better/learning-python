@@ -1,4 +1,59 @@
-venv
+# -----------------------------
+# Python bytecode and caches
+# -----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# -----------------------------
+# Virtual environments
+# -----------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# -----------------------------
+# Test and tooling caches
+# -----------------------------
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+.coverage.*
+htmlcov/
+
+# -----------------------------
+# Build and packaging artifacts
+# -----------------------------
+build/
+dist/
+site/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# -----------------------------
+# Jupyter
+# -----------------------------
+.ipynb_checkpoints/
+
+# -----------------------------
+# IDE/editor local files
+# -----------------------------
+.vscode/
+.idea/
+
+# -----------------------------
+# Environment and secrets
+# -----------------------------
 .env
 .env.*
 !.env.example
+
+# -----------------------------
+# OS files
+# -----------------------------
+.DS_Store
+Thumbs.db

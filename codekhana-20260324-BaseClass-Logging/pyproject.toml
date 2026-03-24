@@ -3,6 +3,8 @@ name = "codekhana-20260324-baseclass-logging"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "anthropic>=0.62.0",
+    "openai>=1.108.0",
     "requests>=2.32.5",
 ]
 
