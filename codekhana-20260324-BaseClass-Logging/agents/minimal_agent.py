@@ -24,24 +24,15 @@ class MinimalAgent(BaseAgent):
     queue_name = "minimal_queue"
 
     def pre_process(self, input_payload: dict[str, Any]) -> dict[str, Any]:
-        return {
-            **input_payload,
-            "_pre_processed": True,
-        }
+        text = str(input_payload.get("text", "")).strip()
+        return {"text": text}
 
     def core_process(self, input_payload: dict[str, Any]) -> dict[str, Any]:
         text = input_payload.get("text", "")
-        return {
-            "message": f"processed:{text}",
-            "_pre_processed": input_payload.get("_pre_processed", False),
-            "_core_processed": True,
-        }
+        return {"message": f"processed:{text}"}
 
     def post_process(self, core_output: dict[str, Any]) -> dict[str, Any]:
-        return {
-            **core_output,
-            "_post_processed": True,
-        }
+        return {"agent": self.agent_id, **core_output}
 
 
 def main() -> None:

@@ -21,9 +21,7 @@ def test_run_executes_hooks_in_order() -> None:
     output = agent.run({"text": "abc"})
 
     assert output["message"] == "processed:abc"
-    assert output["_pre_processed"] is True
-    assert output["_core_processed"] is True
-    assert output["_post_processed"] is True
+    assert output["agent"] == "minimal_agent"
     assert agent.execution_trace == ["pre_process", "core_process", "post_process"]
 
 
@@ -43,5 +41,14 @@ def test_run_resets_execution_state_each_call() -> None:
 
     assert first["message"] == "processed:first"
     assert second["message"] == "processed:second"
+    assert second["agent"] == "minimal_agent"
     assert agent.execution_trace == ["pre_process", "core_process", "post_process"]
     assert agent.execution_state["final_output"]["message"] == "processed:second"
+
+
+def test_pre_process_normalizes_whitespace() -> None:
+    agent = MinimalAgent()
+
+    output = agent.run({"text": "  hello  "})
+
+    assert output["message"] == "processed:hello"
