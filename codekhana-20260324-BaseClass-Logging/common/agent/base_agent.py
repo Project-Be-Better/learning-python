@@ -63,7 +63,7 @@ def validate_schema(data: dict[str, Any], schema: dict[str, Any] | None) -> dict
 
         value = data[field_name]
 
-        # Type coercion
+        # Type coercion / type validation
         try:
             if field_type == "int":
                 value = int(value)
@@ -73,6 +73,15 @@ def validate_schema(data: dict[str, Any], schema: dict[str, Any] | None) -> dict
                 value = str(value)
             elif field_type == "bool":
                 value = bool(value)
+            elif field_type == "dict":
+                if not isinstance(value, dict):
+                    raise TypeError(f"expected dict, got {type(value).__name__}")
+            elif field_type == "list":
+                if not isinstance(value, list):
+                    raise TypeError(f"expected list, got {type(value).__name__}")
+            else:
+                # Unknown types are treated as pass-through to avoid destructive coercion.
+                value = value
         except (ValueError, TypeError) as e:
             raise SchemaValidationError(
                 f"Field {field_name}: cannot coerce to {field_type}: {e}"
