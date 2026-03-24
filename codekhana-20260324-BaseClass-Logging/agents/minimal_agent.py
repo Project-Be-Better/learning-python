@@ -12,6 +12,7 @@ if __package__ is None or __package__ == "":
         sys.path.insert(0, str(PROJECT_ROOT))
 
 from common.agent.base_agent import BaseAgent
+from common.agent.llm_client import LLMClient
 
 
 class MinimalAgent(BaseAgent):
@@ -23,13 +24,27 @@ class MinimalAgent(BaseAgent):
     task_name = "minimal_agent.run"
     queue_name = "minimal_queue"
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.llm_client = LLMClient()
+
     def pre_process(self, input_payload: dict[str, Any]) -> dict[str, Any]:
         text = str(input_payload.get("text", "")).strip()
-        return {"text": text}
+        use_llm = bool(input_payload.get("use_llm", False))
+        return {"text": text, "use_llm": use_llm}
 
     def core_process(self, input_payload: dict[str, Any]) -> dict[str, Any]:
         text = input_payload.get("text", "")
-        return {"message": f"processed:{text}"}
+        use_llm = input_payload.get("use_llm", False)
+        if not use_llm:
+            return {"message": f"processed:{text}", "mode": "deterministic"}
+
+        result = self.llm_client.generate(
+            prompt=text,
+            model_tier=self.model_tier,
+            fallback=lambda p: f"processed:{p}",
+        )
+        return {"message": result.message, "mode": result.mode, "model": result.model}
 
     def post_process(self, core_output: dict[str, Any]) -> dict[str, Any]:
         return {"agent": self.agent_id, **core_output}

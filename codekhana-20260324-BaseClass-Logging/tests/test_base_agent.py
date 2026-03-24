@@ -24,6 +24,7 @@ def test_run_executes_hooks_in_order() -> None:
 
     assert output["message"] == "processed:abc"
     assert output["agent"] == "minimal_agent"
+    assert output["mode"] == "deterministic"
     assert agent.execution_trace == ["pre_process", "core_process", "post_process"]
 
 
@@ -44,6 +45,7 @@ def test_run_resets_execution_state_each_call() -> None:
     assert first["message"] == "processed:first"
     assert second["message"] == "processed:second"
     assert second["agent"] == "minimal_agent"
+    assert second["mode"] == "deterministic"
     assert agent.execution_trace == ["pre_process", "core_process", "post_process"]
     assert agent.execution_state["final_output"]["message"] == "processed:second"
 
@@ -54,6 +56,16 @@ def test_pre_process_normalizes_whitespace() -> None:
     output = agent.run({"text": "  hello  "})
 
     assert output["message"] == "processed:hello"
+
+
+def test_llm_mode_falls_back_without_api_key(monkeypatch) -> None:
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    agent = MinimalAgent()
+
+    output = agent.run({"text": "hello", "use_llm": True})
+
+    assert output["message"] == "processed:hello"
+    assert output["mode"] == "fallback"
 
 
 def test_run_emits_structured_lifecycle_logs(
